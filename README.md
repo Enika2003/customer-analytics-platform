@@ -100,10 +100,10 @@ I connected Tableau directly to PostgreSQL using a custom SQL query that joins t
 
 ## Key findings
 
-**Revenue is seasonal.** Both years show the same Q4 spike. Any retention or acquisition campaign should account for this — October is not the time to run experiments, it's the time to convert.
+**Revenue is seasonal.** Both years show the same Q4 spike. Any retention or acquisition campaign should account for this, October is not the time to run experiments, it's the time to convert.
 
 **Most customers are at risk or lost.** 3,839 customers sit in the At Risk bucket. These are people who bought at least once but haven't been retained. The business question this raises: are they one-time buyers by nature, or is there a retention problem?
 
 **A tiny group of wholesale buyers drives outsized revenue.** The 42 Champions and Loyal customers almost certainly account for a significant portion of total revenue. Losing one of them hurts far more than losing 100 regular customers.
 
-**Churn is predictable but not perfectly.** An AUC of 0.81 means the model is genuinely useful for prioritising who to target with a retention campaign — but it's not certain. The 24% false positive rate means some "at risk" customers would have stayed anyway.
+**Churn is predictable but not perfectly.** An AUC of 0.81 means the model is genuinely useful for prioritising who to target with a retention campaign, but it's not certain. The 24% false positive rate means some "at risk" customers would have stayed anyway.
