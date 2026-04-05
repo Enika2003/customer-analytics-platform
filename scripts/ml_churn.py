@@ -15,11 +15,7 @@ warnings.filterwarnings("ignore")
 DB_URL = "postgresql+psycopg2://localhost/retail_analytics"
 engine = create_engine(DB_URL)
 
-# -------------------------------------------------------------
 # 1. Temporal Split — avoids data leakage
-#    Features built on: everything BEFORE cutoff
-#    Churn label:       no purchase AFTER cutoff
-# -------------------------------------------------------------
 print("Loading transactions...")
 query = "SELECT customer_id, date_id, invoice_id, revenue, stockcode FROM fact_sales"
 df = pd.read_sql(query, engine)
@@ -34,9 +30,7 @@ print(f"  Cutoff date   : {cutoff.date()}")
 hist   = df[df["date_id"] <  cutoff]   # feature period
 future = df[df["date_id"] >= cutoff]   # label period
 
-# -------------------------------------------------------------
-# 2. Build Features from HISTORICAL period only
-# -------------------------------------------------------------
+
 print("\nBuilding features from historical period...")
 features = hist.groupby("customer_id").agg(
     frequency       = ("invoice_id",  "nunique"),
@@ -51,9 +45,8 @@ features["recency_to_cutoff"] = (cutoff - features["last_purchase"]).dt.days
 features["tenure_days"]       = (features["last_purchase"] - features["first_purchase"]).dt.days
 features["avg_days_between"]  = (features["tenure_days"] / features["frequency"]).replace([np.inf], 0)
 
-# -------------------------------------------------------------
+
 # 3. Build Churn Label from FUTURE period
-# -------------------------------------------------------------
 active_in_future = future["customer_id"].unique()
 features["churned"] = (~features["customer_id"].isin(active_in_future)).astype(int)
 
@@ -61,9 +54,8 @@ print(f"  Customers in historical period : {len(features):,}")
 print(f"  Churned (no future purchase)   : {features['churned'].sum():,}  ({features['churned'].mean()*100:.1f}%)")
 print(f"  Retained                       : {(1-features['churned']).sum():,}  ({(1-features['churned']).mean()*100:.1f}%)")
 
-# -------------------------------------------------------------
+
 # 4. Train / Test Split
-# -------------------------------------------------------------
 FEATURES = ["recency_to_cutoff", "frequency", "monetary", "avg_order_value",
             "unique_products", "tenure_days", "avg_days_between"]
 
@@ -78,9 +70,8 @@ scaler       = StandardScaler()
 X_train_sc   = scaler.fit_transform(X_train)
 X_test_sc    = scaler.transform(X_test)
 
-# -------------------------------------------------------------
+
 # 5. Logistic Regression
-# -------------------------------------------------------------
 print("\nTraining Logistic Regression...")
 lr = LogisticRegression(max_iter=1000, random_state=42)
 lr.fit(X_train_sc, y_train)
@@ -90,9 +81,8 @@ lr_auc   = roc_auc_score(y_test, lr_proba)
 print(f"  AUC: {lr_auc:.3f}")
 print(classification_report(y_test, lr_preds, target_names=["Retained", "Churned"]))
 
-# -------------------------------------------------------------
+
 # 6. XGBoost
-# -------------------------------------------------------------
 print("Training XGBoost...")
 xgb = GradientBoostingClassifier(n_estimators=200, max_depth=4,
                                   learning_rate=0.05, random_state=42)
@@ -103,9 +93,7 @@ xgb_auc   = roc_auc_score(y_test, xgb_proba)
 print(f"  AUC: {xgb_auc:.3f}")
 print(classification_report(y_test, xgb_preds, target_names=["Retained", "Churned"]))
 
-# -------------------------------------------------------------
 # 7. Plots
-# -------------------------------------------------------------
 fig, axes = plt.subplots(1, 3, figsize=(18, 5))
 
 RocCurveDisplay.from_predictions(y_test, lr_proba,  name=f"Logistic (AUC={lr_auc:.2f})",  ax=axes[0])
@@ -128,9 +116,7 @@ plt.tight_layout()
 plt.savefig("data/churn_model.png", dpi=150)
 print("Saved: data/churn_model.png")
 
-# -------------------------------------------------------------
 # 8. Score ALL historical customers & write to PostgreSQL
-# -------------------------------------------------------------
 print("\nWriting churn scores to PostgreSQL...")
 best_model = xgb if xgb_auc >= lr_auc else lr
 X_all      = features[FEATURES].fillna(0)
