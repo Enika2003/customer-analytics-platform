@@ -94,7 +94,7 @@ I connected Tableau directly to PostgreSQL using a custom SQL query that joins t
 - Customer segment breakdown
 - Churn risk by country
 
-![Dashboard](data/dashboard.png)
+![Dashboard](https://github.com/Enika2003/customer-analytics-platform/blob/main/data/Customer%20Analytics%20Dashboard.png)
 
 ---
 
