@@ -13,11 +13,10 @@ warnings.filterwarnings("ignore")
 DB_URL = "postgresql+psycopg2://localhost/retail_analytics"
 engine = create_engine(DB_URL)
 
-# -------------------------------------------------------------
+
 # 1. Temporal Split
 #    First 18 months → features
 #    Last 6 months   → actual future revenue (CLV target)
-# -------------------------------------------------------------
 print("Loading transactions...")
 query = "SELECT customer_id, date_id, invoice_id, revenue FROM fact_sales"
 df = pd.read_sql(query, engine)
@@ -34,9 +33,7 @@ print(f"  Target period  : {cutoff.date()} → {max_date.date()}")
 hist   = df[df["date_id"] <  cutoff]
 future = df[df["date_id"] >= cutoff]
 
-# -------------------------------------------------------------
 # 2. Build Features (historical behaviour)
-# -------------------------------------------------------------
 print("\nBuilding features...")
 features = hist.groupby("customer_id").agg(
     frequency       = ("invoice_id", "nunique"),
@@ -54,9 +51,7 @@ features["avg_days_between"] = (
     features["tenure_days"] / features["frequency"]
 ).replace([np.inf, np.nan], 0)
 
-# -------------------------------------------------------------
 # 3. Build Target: actual revenue in future period
-# -------------------------------------------------------------
 future_rev = future.groupby("customer_id")["revenue"].sum().reset_index()
 future_rev.columns = ["customer_id", "future_revenue"]
 
@@ -72,9 +67,7 @@ print(f"  Max future revenue: £{data['future_revenue'].max():,.2f}")
 # Log-transform target (revenue is heavily right-skewed)
 data["log_future_revenue"] = np.log1p(data["future_revenue"])
 
-# -------------------------------------------------------------
 # 4. Train / Test Split
-# -------------------------------------------------------------
 FEATURES = ["recency", "frequency", "total_revenue", "avg_order_value",
             "min_order_value", "max_order_value", "tenure_days", "avg_days_between"]
 
@@ -85,9 +78,8 @@ X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42
 )
 
-# -------------------------------------------------------------
+
 # 5. Train Model
-# -------------------------------------------------------------
 print("\nTraining CLV model (GradientBoosting)...")
 model = GradientBoostingRegressor(
     n_estimators=300, max_depth=4,
@@ -108,9 +100,7 @@ print(f"  MAE (£)         : £{mae:,.2f}")
 cv_r2 = cross_val_score(model, X, y, cv=5, scoring="r2")
 print(f"  Cross-val R²    : {cv_r2.mean():.3f} ± {cv_r2.std():.3f}")
 
-# -------------------------------------------------------------
 # 6. Plots
-# -------------------------------------------------------------
 fig, axes = plt.subplots(1, 3, figsize=(18, 5))
 
 # Actual vs Predicted
@@ -139,10 +129,6 @@ axes[2].set_xlim(0, np.percentile(all_pred, 95))
 plt.tight_layout()
 plt.savefig("data/clv_model.png", dpi=150)
 print("Saved: data/clv_model.png")
-
-# -------------------------------------------------------------
-# 7. Score ALL customers & write to PostgreSQL
-# -------------------------------------------------------------
 print("\nWriting CLV scores to PostgreSQL...")
 all_features = features.copy()
 X_all        = all_features[FEATURES].fillna(0)
