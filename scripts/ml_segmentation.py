@@ -12,9 +12,6 @@ warnings.filterwarnings("ignore")
 DB_URL = "postgresql+psycopg2://localhost/retail_analytics"
 engine = create_engine(DB_URL)
 
-# -------------------------------------------------------------
-# 1. Build RFM Table from fact_sales
-# -------------------------------------------------------------
 print("Building RFM features...")
 
 rfm_query = """
@@ -39,15 +36,10 @@ rfm = df[["customer_id", "recency", "frequency", "monetary"]].copy()
 print(f"  {len(rfm):,} customers")
 print(rfm.describe().round(2))
 
-# -------------------------------------------------------------
-# 2. Scale Features
-# -------------------------------------------------------------
 scaler = StandardScaler()
 rfm_scaled = scaler.fit_transform(rfm[["recency", "frequency", "monetary"]])
 
-# -------------------------------------------------------------
-# 3. Find Optimal K (Elbow + Silhouette)
-# -------------------------------------------------------------
+
 print("\nFinding optimal number of clusters...")
 inertias, silhouettes = [], []
 K_range = range(2, 9)
@@ -69,18 +61,13 @@ plt.tight_layout()
 plt.savefig("data/elbow_silhouette.png", dpi=150)
 print("  Saved: data/elbow_silhouette.png")
 
-# -------------------------------------------------------------
-# 4. Fit Final Model (k=4)
-# -------------------------------------------------------------
+#  Fit Final Model (k=4)
 BEST_K = 4
 print(f"\nFitting KMeans with k={BEST_K}...")
 km_final = KMeans(n_clusters=BEST_K, random_state=42, n_init=10)
 rfm["cluster"] = km_final.fit_predict(rfm_scaled)
 
-# -------------------------------------------------------------
-# 5. Label Segments Meaningfully
-# -------------------------------------------------------------
-# Summarise each cluster to assign a business label
+
 summary = rfm.groupby("cluster")[["recency", "frequency", "monetary"]].mean()
 print("\nCluster Centroids:")
 print(summary.round(2))
@@ -104,16 +91,11 @@ rfm["segment"] = rfm["cluster"].map(rank_order).map(label_map)
 print("\nSegment distribution:")
 print(rfm["segment"].value_counts())
 
-# -------------------------------------------------------------
-# 6. Write Results to PostgreSQL
-# -------------------------------------------------------------
+
 print("\nWriting segments to PostgreSQL...")
 rfm.to_sql("customer_segments", engine, if_exists="replace", index=False)
 print("Done. Table: customer_segments")
 
-# -------------------------------------------------------------
-# 7. Quick Summary Chart
-# -------------------------------------------------------------
 fig, axes = plt.subplots(1, 3, figsize=(15, 4))
 metrics = ["recency", "frequency", "monetary"]
 titles  = ["Recency (days)", "Frequency (orders)", "Monetary (£)"]
