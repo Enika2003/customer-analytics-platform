@@ -17,9 +17,8 @@ theme_clean <- theme_minimal(base_size = 13) +
         plot.subtitle = element_text(colour = "grey50"),
         panel.grid.minor = element_blank())
 
-# =============================================================
+
 # 1. Revenue Over Time
-# =============================================================
 rev_time <- dbGetQuery(con, "
   SELECT
     DATE_TRUNC('month', date_id) AS month,
@@ -41,9 +40,8 @@ p1 <- ggplot(rev_time, aes(x = month, y = monthly_revenue)) +
   theme_clean +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-# =============================================================
+
 # 2. Customer Segment Profiles (RFM)
-# =============================================================
 segments <- dbGetQuery(con, "
   SELECT segment,
          AVG(recency)   AS avg_recency,
@@ -78,9 +76,7 @@ p2 <- ggplot(seg_long, aes(x = segment, y = value, fill = segment)) +
   theme_clean +
   theme(axis.text.x = element_text(angle = 30, hjust = 1))
 
-# =============================================================
 # 3. Churn Risk by Country (Top 10)
-# =============================================================
 churn_country <- dbGetQuery(con, "
   SELECT
     dc.primary_country                    AS country,
@@ -111,9 +107,7 @@ p3 <- ggplot(churn_country,
        x = NULL, y = "% High Risk Customers") +
   theme_clean
 
-# =============================================================
 # 4. CLV Distribution by Segment
-# =============================================================
 clv <- dbGetQuery(con, "SELECT clv_segment, predicted_clv FROM clv_scores")
 clv$clv_segment <- factor(clv$clv_segment,
                            levels = c("Bronze","Silver","Gold","Platinum"))
@@ -129,9 +123,8 @@ p4 <- ggplot(clv, aes(x = predicted_clv, fill = clv_segment)) +
        x = "Predicted CLV (£)", y = "Customers") +
   theme_clean
 
-# =============================================================
+
 # 5. Save all charts
-# =============================================================
 ggsave("data/chart_revenue_trend.png",    p1, width = 10, height = 5, dpi = 150)
 ggsave("data/chart_segment_profiles.png", p2, width = 12, height = 5, dpi = 150)
 ggsave("data/chart_churn_country.png",    p3, width = 8,  height = 5, dpi = 150)
